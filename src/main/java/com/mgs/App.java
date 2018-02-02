@@ -3,7 +3,6 @@ package com.mgs;
 import com.mgs.beans.Client;
 import com.mgs.beans.Event;
 import com.mgs.loggers.EventLogger;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
