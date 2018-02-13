@@ -1,49 +1,91 @@
 package com.mgs;
 
-import com.mgs.beans.Client;
-import com.mgs.beans.Event;
-import com.mgs.loggers.EventLogger;
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.DateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import com.mgs.App;
+import org.junit.Test;
+
+import com.mgs.beans.Client;
+import com.mgs.beans.Event;
+import com.mgs.EventType;
+import com.mgs.loggers.EventLogger;
 
 public class TestApp {
-	
+
     private static final String MSG = "Hello";
 
     @Test
-    public void test() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+    public void testClientNameSubstitution() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
         Client client = new Client("25", "Bob");
         DummyLogger dummyLogger = new DummyLogger();
-        
-        App app = new App(client, dummyLogger);
-        
+
+        Map<EventType, EventLogger> emptyMap = Collections.emptyMap();
+
+        App app = new App(client, dummyLogger, emptyMap);
+
         Event event = new Event(new Date(), DateFormat.getDateTimeInstance());
-        
-        invokeLogEvent(app, event, MSG + " " + client.getId());
+
+        invokeLogEvent(app, null, event, MSG + " " + client.getId());
         assertTrue(dummyLogger.getEvent().getMsg().contains(MSG));
         assertTrue(dummyLogger.getEvent().getMsg().contains(client.getFullName()));
-        
-        invokeLogEvent(app, event, MSG + " 0");
+
+        invokeLogEvent(app, null, event, MSG + " 0");
         assertTrue(dummyLogger.getEvent().getMsg().contains(MSG));
         assertFalse(dummyLogger.getEvent().getMsg().contains(client.getFullName()));
     }
 
-    private void invokeLogEvent(App app, Event event, String message) throws NoSuchMethodException,
-            IllegalAccessException, InvocationTargetException {
-        Method method = app.getClass().getDeclaredMethod("logEvent", Event.class, String.class);
-        method.setAccessible(true);
-        method.invoke(app, event, message);
+    @Test
+    public void testCorrectLoggerCall() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Client client = new Client("25", "Bob");
+        DummyLogger defaultLogger = new DummyLogger();
+        final DummyLogger infoLogger = new DummyLogger();
+
+        @SuppressWarnings("serial")
+        App app = new App(client, defaultLogger, new HashMap<EventType, EventLogger>() {{
+            put(EventType.INFO, infoLogger);
+        }});
+
+        Event event = new Event(new Date(), DateFormat.getDateTimeInstance());
+
+        invokeLogEvent(app, null, event, MSG + " " + client.getId());
+        assertNotNull(defaultLogger.getEvent());
+        assertNull(infoLogger.getEvent());
+
+        defaultLogger.setEvent(null);
+        infoLogger.setEvent(null);
+
+        invokeLogEvent(app, EventType.ERROR, event, MSG + " " + client.getId());
+        assertNotNull(defaultLogger.getEvent());
+        assertNull(infoLogger.getEvent());
+
+        defaultLogger.setEvent(null);
+        infoLogger.setEvent(null);
+
+        invokeLogEvent(app, EventType.INFO, event, MSG + " 0");
+        assertNull(defaultLogger.getEvent());
+        assertNotNull(infoLogger.getEvent());;
     }
-    
+
+    private void invokeLogEvent(App app, EventType type, Event event, String message) throws NoSuchMethodException,
+            IllegalAccessException, InvocationTargetException {
+        Method method = app.getClass().getDeclaredMethod("logEvent", EventType.class, Event.class, String.class);
+        method.setAccessible(true);
+        method.invoke(app, type, event, message);
+    }
+
     private class DummyLogger implements EventLogger {
-        
+
         private Event event;
 
         //@Override
@@ -54,7 +96,11 @@ public class TestApp {
         public Event getEvent() {
             return event;
         }
-        
+
+        public void setEvent(Event event) {
+            this.event = event;
+        }
+
     };
 
 }

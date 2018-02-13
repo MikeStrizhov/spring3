@@ -15,4 +15,15 @@
     <bean id="cacheFileEventLogger" class="com.mgs.loggers.CacheFileEventLogger" scope="singleton" destroy-method="destroy" parent="fileEventLogger">
         <constructor-arg value="2" type="int"/>
     </bean>
+
+    <bean id="combinedEventLogger" class="com.mgs.loggers.CombinedEventLogger">
+        <constructor-arg>
+            <list>
+                <ref bean="consoleEventLogger"/>
+                <ref bean="fileEventLogger"/>
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <bean id="consoleEventLogger" class="com.mgs.loggers.ConsoleEventLogger"/>
 </beans>
